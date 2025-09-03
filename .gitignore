@@ -12,3 +12,9 @@ microservice-ui/npm-debug.log*
 .DS_Store
 .idea/
 .vscode/
+
+# Local & backup stuff
+microservice-ui.bak_*/
+.env
+readme-images/
+*.disabled
