@@ -1,20 +1,14 @@
-# Java / Spring / Maven / Gradle
-target/
-build/
-.gradle/
+# Java
+**/target/
 *.log
-*.iml
-.idea/
-.project
-.settings/
 
-# Angular
+# Angular / Node
 microservice-ui/node_modules/
 microservice-ui/dist/
 microservice-ui/.angular/cache/
 microservice-ui/npm-debug.log*
-microservice-ui/yarn-error.log*
 
-# Misc
+# OS/IDE
 .DS_Store
-.env
+.idea/
+.vscode/
