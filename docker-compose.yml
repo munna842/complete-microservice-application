@@ -1,0 +1,126 @@
+# docker-compose.yml
+# Compose v2+ (no 'version:' key)
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # RabbitMQ UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  service-registry:
+    image: manojkumar0143/service-registry:latest
+    container_name: service-registry
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_APPLICATION_NAME=service-registry
+      - SERVER_PORT=8761
+      # registry can register itself so it shows up in the UI
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=service-registry
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=false
+    healthcheck:
+      # try actuator first; fall back to root page if actuator not enabled
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8761/actuator/health || curl -fsS http://localhost:8761/"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  api-gateway:
+    image: manojkumar0143/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - SPRING_APPLICATION_NAME=api-gateway
+      - SERVER_PORT=8000
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      # *** Force Eureka URL inside the Docker network ***
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka/"},"registerWithEureka":true,"fetchRegistry":true},"instance":{"preferIpAddress":false,"hostname":"api-gateway"}}}
+    depends_on:
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  product-service:
+    image: manojkumar0143/product-service:latest
+    container_name: product-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_APPLICATION_NAME=product-service
+      - SERVER_PORT=8081
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      # *** Force Eureka URL inside the Docker network ***
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka/"},"registerWithEureka":true,"fetchRegistry":true},"instance":{"preferIpAddress":false,"hostname":"product-service"}}}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  offer-service:
+    image: manojkumar0143/offer-service:latest
+    container_name: offer-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_APPLICATION_NAME=offer-service
+      - SERVER_PORT=8082
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      # *** Force Eureka URL inside the Docker network ***
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka/"},"registerWithEureka":true,"fetchRegistry":true},"instance":{"preferIpAddress":false,"hostname":"offer-service"}}}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  microservice-ui:
+    container_name: microservice-ui
+    build:
+      context: ./microservice-ui
+      dockerfile: Dockerfile
+    # If you later publish a UI image, replace the build with:
+    # image: your-dockerhub-user/microservice-ui:latest
+    ports:
+      - "80:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      offer-service:
+        condition: service_healthy
+    restart: unless-stopped

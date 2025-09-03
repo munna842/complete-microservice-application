@@ -23,7 +23,7 @@ const productPort = 8081;
 })
 export class StoreComponent implements OnInit {
 
-    private products:any;
+public products:any;
 
     private productsUrl = 'http://localhost:8000/product-service/products';
 
