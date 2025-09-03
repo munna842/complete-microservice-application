@@ -1,21 +1,20 @@
-# OS/IDE
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.iml
-
-# Java / Spring
-**/target/
-**/build/
+# Java / Spring / Maven / Gradle
+target/
+build/
+.gradle/
 *.log
+*.iml
+.idea/
+.project
+.settings/
 
-# Node / Angular
+# Angular
 microservice-ui/node_modules/
 microservice-ui/dist/
 microservice-ui/.angular/cache/
-npm-debug.log*
-yarn-error.log*
+microservice-ui/npm-debug.log*
+microservice-ui/yarn-error.log*
 
-# Env & misc
-*.env
+# Misc
+.DS_Store
+.env
